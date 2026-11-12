@@ -9,16 +9,16 @@ import { useEffect, useRef } from "react";
  *  - „Смени часа“ → обратно до часовете
  * Не плъзга, ако целта вече е във видимата горна половина на екрана.
  */
-export function BookingScroll({ date, hour }: { date: string | null; hour: number | null }) {
-  const prev = useRef<{ date: string | null; hour: number | null }>({ date: null, hour: null });
+export function BookingScroll({ date, time }: { date: string | null; time: number | null }) {
+  const prev = useRef<{ date: string | null; time: number | null }>({ date: null, time: null });
 
   useEffect(() => {
     const before = prev.current;
-    prev.current = { date, hour };
+    prev.current = { date, time };
 
     let targetId: string | null = null;
-    if (hour !== null && (hour !== before.hour || date !== before.date)) targetId = "danni";
-    else if (date !== null && (date !== before.date || (before.hour !== null && hour === null))) targetId = "izberi-chas";
+    if (time !== null && (time !== before.time || date !== before.date)) targetId = "danni";
+    else if (date !== null && (date !== before.date || (before.time !== null && time === null))) targetId = "izberi-chas";
     if (!targetId) return;
 
     // Изчакваме един кадър, за да е изрисувано новото съдържание.
@@ -37,7 +37,7 @@ export function BookingScroll({ date, hour }: { date: string | null; hour: numbe
       }
     });
     return () => cancelAnimationFrame(frame);
-  }, [date, hour]);
+  }, [date, time]);
 
   return null;
 }

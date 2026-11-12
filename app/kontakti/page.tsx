@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CalendarIcon, PhoneIcon } from "@/components/Decor";
-import { booking, site } from "@/lib/config";
-import { formatHour } from "@/lib/format";
+import { booking, dayEnd, site } from "@/lib/config";
+import { formatTime } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Контакти",
-  description: `Телефон за връзка с логопед ${site.therapist}: ${site.phoneDisplay}. Работно време: понеделник – петък от ${booking.firstHour}:00 ч.`,
+  description: `Телефон за връзка с логопед ${site.therapist}: ${site.phoneDisplay}. Работно време: понеделник – петък от ${formatTime(booking.firstStart)} ч.`,
   alternates: { canonical: "/kontakti" },
 };
 
@@ -41,7 +41,7 @@ export default function ContactsPage() {
             <p className="tabular">
               Понеделник – петък
               <br />
-              {formatHour(booking.firstHour)}–{formatHour(booking.lastHour + 1)}
+              {formatTime(booking.firstStart)}–{formatTime(dayEnd)}
             </p>
             {hasAddress ? (
               <>

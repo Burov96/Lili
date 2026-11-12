@@ -11,12 +11,17 @@ export function ConfirmButton({
   label,
   confirmLabel,
   ariaLabel,
+  pendingLabel = "Изтриване…",
+  danger = true,
 }: {
   action: (form: FormData) => Promise<void>;
   fields: Record<string, string | number>;
   label: string;
   confirmLabel: string;
   ariaLabel: string;
+  pendingLabel?: string;
+  /** Червен бутон за потвърждение (изтриване); иначе обикновен. */
+  danger?: boolean;
 }) {
   const [armed, setArmed] = useState(false);
   if (!armed) {
@@ -31,7 +36,7 @@ export function ConfirmButton({
       {Object.entries(fields).map(([k, v]) => (
         <input key={k} type="hidden" name={k} value={v} readOnly />
       ))}
-      <Submit className="btn btn--danger btn--small" pendingLabel="Изтриване…">
+      <Submit className={danger ? "btn btn--danger btn--small" : "btn btn--small"} pendingLabel={pendingLabel}>
         {confirmLabel}
       </Submit>
       <button type="button" className="btn btn--ghost btn--small" onClick={() => setArmed(false)}>

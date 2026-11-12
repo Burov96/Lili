@@ -67,18 +67,27 @@ export default async function ServicePage({ params }: Props) {
               <p key={i}>{p}</p>
             ))}
             <div className="hero__actions">
-              <Link href="/zapazi-chas" className="btn">
-                <CalendarIcon />
-                Запази час
-              </Link>
-              <a href={`tel:${site.phoneIntl}`} className="btn btn--ghost">
-                <PhoneIcon />
-                <span className="nowrap">{site.phoneDisplay}</span>
-              </a>
+              {s.byPhone ? (
+                <a href={`tel:${site.phoneIntl}`} className="btn">
+                  <PhoneIcon />
+                  Обади се за уговорка
+                </a>
+              ) : (
+                <>
+                  <Link href="/zapazi-chas" className="btn">
+                    <CalendarIcon />
+                    Запази час
+                  </Link>
+                  <a href={`tel:${site.phoneIntl}`} className="btn btn--ghost">
+                    <PhoneIcon />
+                    <span className="nowrap">{site.phoneDisplay}</span>
+                  </a>
+                </>
+              )}
             </div>
           </div>
           <div style={{ ["--accent" as string]: s.color }}>
-            <h2 style={{ fontSize: "var(--step-1)" }}>Кога да потърсите логопед</h2>
+            <h2 style={{ fontSize: "var(--step-1)" }}>{s.signsTitle ?? "Кога да потърсите логопед"}</h2>
             <ul className="check-list">
               {s.signs.map((x) => (
                 <li key={x}>{x}</li>

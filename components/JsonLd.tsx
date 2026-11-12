@@ -1,5 +1,5 @@
-import { booking, site } from "@/lib/config";
-import { formatHour } from "@/lib/format";
+import { booking, dayEnd, site } from "@/lib/config";
+import { formatTime } from "@/lib/format";
 import { services } from "@/lib/services";
 
 export function JsonLd({ data }: { data: object }) {
@@ -33,14 +33,16 @@ export function businessJsonLd() {
       {
         "@type": "OpeningHoursSpecification",
         dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        opens: formatHour(booking.firstHour),
-        closes: formatHour(booking.lastHour + 1),
+        opens: formatTime(booking.firstStart),
+        closes: formatTime(dayEnd),
       },
     ],
     employee: {
       "@type": "Person",
       name: site.therapist,
       jobTitle: site.jobTitle,
+      alumniOf: { "@type": "CollegeOrUniversity", name: "Нов български университет" },
+      url: `${site.url}/za-logopeda`,
     },
     knowsAbout: services.map((s) => s.title),
     hasOfferCatalog: {

@@ -7,9 +7,9 @@ import { initialBookingState, type BookingState } from "@/app/zapazi-chas/types"
 import { site } from "@/lib/config";
 import { Heart } from "./Decor";
 
-type Props = { date: string; hour: number; whenLabel: string; available: boolean };
+type Props = { date: string; time: number; whenLabel: string; available: boolean };
 
-export function BookingForm({ date, hour, whenLabel, available }: Props) {
+export function BookingForm({ date, time, whenLabel, available }: Props) {
   const [state, formAction, pending] = useActionState(createBooking, initialBookingState);
   const successRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +26,7 @@ export function BookingForm({ date, hour, whenLabel, available }: Props) {
   }, [state]);
 
   // Потвърждението се показва само докато е избран същият час.
-  if (state.status === "success" && state.slot === `${date}|${hour}`) {
+  if (state.status === "success" && state.slot === `${date}|${time}`) {
     return (
       <div ref={successRef} className="success reveal" role="status" aria-live="polite">
         <h2>
@@ -66,12 +66,12 @@ export function BookingForm({ date, hour, whenLabel, available }: Props) {
   return (
     <div className="reveal">
     <form key={state.attempt} action={formAction} noValidate aria-busy={pending}>
-      <div className="picked" key={`${date}|${hour}`}>
+      <div className="picked" key={`${date}|${time}`}>
         <strong>{whenLabel}</strong>
         <Link href={`/zapazi-chas?date=${date}`} scroll={false}>Смени часа</Link>
       </div>
       <input type="hidden" name="date" value={date} readOnly />
-      <input type="hidden" name="hour" value={hour} readOnly />
+      <input type="hidden" name="time" value={time} readOnly />
       <Fields state={state} pending={pending} />
     </form>
     </div>

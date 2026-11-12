@@ -28,15 +28,17 @@ export const site = {
   },
   geo: null as null | { lat: number; lng: number },
   description:
-    "Логопедичен кабинет на Лиляна Ловчанска: терапия при забавено речево развитие, артикулационни нарушения, афазии, аутизъм, деца със СОП и обучителни трудности. Запазете час онлайн.",
+    "Логопед Лиляна Ловчанска: индивидуална подкрепа за деца и възрастни — езиково развитие, звукопроизношение, афазии след инсулт, домашни посещения, аутизъм, деца със СОП и обучителни трудности. Запазете час онлайн.",
 } as const;
 
 export const booking = {
   timeZone: "Europe/Sofia",
-  /** Първият час за деня (24-часов формат). */
-  firstHour: 15,
-  /** Последният час, в който може да започне посещение. 18 → последен час 18:00–19:00. */
-  lastHour: 18,
+  /** Начало на първия час, в минути от полунощ (15:00). */
+  firstStart: 15 * 60,
+  /** Начало на последния час, в минути от полунощ (18:30). */
+  lastStart: 18 * 60 + 30,
+  /** През колко минути започват часовете. */
+  slotMinutes: 30,
   /** Колко души могат да запишат един и същи час. */
   capacityPerSlot: 3,
   /** Колко седмици напред може да се записва. */
@@ -47,7 +49,11 @@ export const booking = {
   retentionDays: 180,
 } as const;
 
-export const slotHours: number[] = Array.from(
-  { length: booking.lastHour - booking.firstHour + 1 },
-  (_, i) => booking.firstHour + i,
+/** Всички начални часове в минути от полунощ: 900 (15:00), 930 (15:30) … */
+export const slotTimes: number[] = Array.from(
+  { length: Math.floor((booking.lastStart - booking.firstStart) / booking.slotMinutes) + 1 },
+  (_, i) => booking.firstStart + i * booking.slotMinutes,
 );
+
+/** Край на работния ден в минути (след последния час). */
+export const dayEnd = booking.lastStart + booking.slotMinutes;

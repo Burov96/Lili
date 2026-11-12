@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { saveBookingAction, type EditState } from "@/app/admin/actions";
+import { moveOccurrenceAction, saveBookingAction, type EditState, type MoveState } from "@/app/admin/actions";
 
-/** Странично панелче (на телефон — отдолу), което се отваря през адреса (?edit= / ?new=). */
+/** Странично панелче (на телефон — отдолу), което се отваря през адреса. */
 export function AdminSheet({
   title,
   closeHref,
@@ -53,49 +53,70 @@ export function AdminSheet({
 }
 
 export type EditValues = {
+  /** id на еднократен запис */
   id: number | null;
+  /** id на повтарящо се посещение (тогава формата редактира цялата поредица) */
+  recId: number | null;
   date: string;
-  hour: number;
+  time: number;
+  weekdays: number[];
   bookerName: string;
   patientName: string | null;
   phone: string;
   note: string | null;
 };
 
+const WEEKDAYS: [number, string, string][] = [
+  [1, "Пн", "понеделник"],
+  [2, "Вт", "вторник"],
+  [3, "Ср", "сряда"],
+  [4, "Чт", "четвъртък"],
+  [5, "Пт", "петък"],
+];
+
 export function EditBookingForm({
   values,
-  hours,
+  times,
   closeHref,
+  week,
 }: {
   values: EditValues;
-  /** [час, етикет] — напр. [15, „15:00–16:00 (2 от 3)“] */
-  hours: [number, string][];
+  /** [минути, „15:30“] */
+  times: [number, string][];
   closeHref: string;
+  week: string;
 }) {
   const [state, action, pending] = useActionState<EditState, FormData>(saveBookingAction, {});
+  const isRule = values.recId !== null;
   const [forOther, setForOther] = useState(Boolean(values.patientName));
+  const [repeat, setRepeat] = useState(isRule);
+  const [days, setDays] = useState<number[]>(values.weekdays);
   const e = state.errors ?? {};
-  const err = (k: keyof NonNullable<EditState["errors"]>, id: string) =>
+  type K = keyof NonNullable<EditState["errors"]>;
+  const err = (k: K, id: string) =>
     e[k] ? (
       <span id={`${id}-err`} className="field-error">
         {e[k]}
       </span>
     ) : null;
-  const inv = (k: keyof NonNullable<EditState["errors"]>, id: string) => ({
+  const inv = (k: K, id: string) => ({
     "aria-invalid": e[k] ? true : undefined,
     "aria-describedby": e[k] ? `${id}-err` : undefined,
   });
+  const toggleDay = (d: number) => setDays((v) => (v.includes(d) ? v.filter((x) => x !== d) : [...v, d].sort()));
 
   return (
     <form action={action} noValidate>
       {values.id ? <input type="hidden" name="id" value={values.id} readOnly /> : null}
+      {values.recId ? <input type="hidden" name="recId" value={values.recId} readOnly /> : null}
+      <input type="hidden" name="week" value={week} readOnly />
       <div aria-live="polite">{state.error ? <p className="alert alert--error reveal">{state.error}</p> : null}</div>
 
       <fieldset className="sheet__group">
         <legend>Кога</legend>
         <div className="admin-form-row">
           <div className="field">
-            <label htmlFor="ed-date">Дата</label>
+            <label htmlFor="ed-date">{repeat ? "Започва от" : "Дата"}</label>
             <input
               id="ed-date"
               name="date"
@@ -109,17 +130,61 @@ export function EditBookingForm({
             {err("date", "ed-date")}
           </div>
           <div className="field">
-            <label htmlFor="ed-hour">Час</label>
-            <select id="ed-hour" name="hour" className="input" defaultValue={values.hour} {...inv("hour", "ed-hour")}>
-              {hours.map(([h, label]) => (
-                <option key={h} value={h}>
+            <label htmlFor="ed-time">Час</label>
+            <select id="ed-time" name="time" className="input tabular" defaultValue={values.time} {...inv("time", "ed-time")}>
+              {times.map(([t, label]) => (
+                <option key={t} value={t}>
                   {label}
                 </option>
               ))}
             </select>
-            {err("hour", "ed-hour")}
+            {err("time", "ed-time")}
           </div>
         </div>
+
+        {!isRule ? (
+          <label className="check">
+            <input type="checkbox" name="repeat" checked={repeat} onChange={(ev) => setRepeat(ev.target.checked)} />
+            <span>Повтаряй всяка седмица</span>
+          </label>
+        ) : null}
+
+        {repeat ? (
+          <div className="field reveal">
+            <span className="label" id="ed-wd-label">
+              В кои дни
+              <span className="hint">Отбележете всички за всеки работен ден. Празниците се прескачат автоматично.</span>
+            </span>
+            <div
+              className="wd-picker"
+              role="group"
+              aria-labelledby="ed-wd-label"
+              aria-describedby={e.weekdays ? "ed-wd-err" : undefined}
+            >
+              {WEEKDAYS.map(([n, short, long]) => (
+                <label key={n} className="wd" title={long}>
+                  <input
+                    type="checkbox"
+                    name="wd"
+                    value={n}
+                    checked={days.includes(n)}
+                    onChange={() => toggleDay(n)}
+                    aria-label={long}
+                  />
+                  <span aria-hidden="true">{short}</span>
+                </label>
+              ))}
+              <button
+                type="button"
+                className="wd-all"
+                onClick={() => setDays(days.length === 5 ? [] : [1, 2, 3, 4, 5])}
+              >
+                {days.length === 5 ? "Изчисти" : "Всички дни"}
+              </button>
+            </div>
+            {err("weekdays", "ed-wd")}
+          </div>
+        ) : null}
       </fieldset>
 
       <fieldset className="sheet__group">
@@ -138,12 +203,7 @@ export function EditBookingForm({
           {err("name", "ed-name")}
         </div>
         <label className="check">
-          <input
-            type="checkbox"
-            name="forOther"
-            checked={forOther}
-            onChange={(ev) => setForOther(ev.target.checked)}
-          />
+          <input type="checkbox" name="forOther" checked={forOther} onChange={(ev) => setForOther(ev.target.checked)} />
           <span>Часът е за друг човек (напр. дете)</span>
         </label>
         {forOther ? (
@@ -194,14 +254,75 @@ export function EditBookingForm({
         </div>
       </fieldset>
 
+      {isRule ? (
+        <p className="muted" style={{ fontSize: "var(--step--1)" }}>
+          Промените важат за всички посещения от поредицата.
+        </p>
+      ) : null}
+
       <div className="sheet__actions">
         <button type="submit" className="btn" disabled={pending}>
-          {pending ? "Запазване…" : values.id ? "Запази промените" : "Добави записа"}
+          {pending
+            ? "Запазване…"
+            : isRule
+              ? "Запази поредицата"
+              : repeat
+                ? "Запази като повтарящо се"
+                : values.id
+                  ? "Запази промените"
+                  : "Добави записа"}
         </button>
         <Link href={closeHref} scroll={false} className="btn btn--ghost">
           Отказ
         </Link>
       </div>
+    </form>
+  );
+}
+
+/** Мести само едно посещение от повтаряща се поредица. */
+export function MoveOccurrenceForm({
+  recId,
+  on,
+  onLabel,
+  times,
+  defaultTime,
+  week,
+}: {
+  recId: number;
+  on: string;
+  onLabel: string;
+  times: [number, string][];
+  defaultTime: number;
+  week: string;
+}) {
+  const [state, action, pending] = useActionState<MoveState, FormData>(moveOccurrenceAction, {});
+  return (
+    <form action={action} className="sheet__once">
+      <input type="hidden" name="recId" value={recId} readOnly />
+      <input type="hidden" name="on" value={on} readOnly />
+      <input type="hidden" name="week" value={week} readOnly />
+      <p className="sheet__once-title">Премести само посещението на {onLabel}</p>
+      <div className="admin-form-row">
+        <div className="field">
+          <label htmlFor="mv-date">Нова дата</label>
+          <input id="mv-date" name="newDate" type="date" className="input" defaultValue={on} required autoComplete="off" />
+        </div>
+        <div className="field">
+          <label htmlFor="mv-time">Нов час</label>
+          <select id="mv-time" name="newTime" className="input tabular" defaultValue={defaultTime}>
+            {times.map(([t, label]) => (
+              <option key={t} value={t}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="submit" className="btn btn--ghost" disabled={pending}>
+          {pending ? "Преместване…" : "Премести"}
+        </button>
+      </div>
+      <div aria-live="polite">{state.error ? <p className="field-error">{state.error}</p> : null}</div>
     </form>
   );
 }

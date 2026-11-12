@@ -2,12 +2,12 @@ import Link from "next/link";
 import { CalendarIcon, Heart, PhoneIcon, Wave } from "@/components/Decor";
 import { HeroAnimation } from "@/components/HeroAnimation";
 import { businessJsonLd, JsonLd } from "@/components/JsonLd";
-import { booking, site } from "@/lib/config";
-import { formatHour } from "@/lib/format";
-import { services } from "@/lib/services";
+import { booking, dayEnd, site } from "@/lib/config";
+import { formatTime } from "@/lib/format";
+import { services, servicesIntro, servicesOutro } from "@/lib/services";
 
 export default function HomePage() {
-  const hours = `${formatHour(booking.firstHour)}–${formatHour(booking.lastHour + 1)}`;
+  const hours = `${formatTime(booking.firstStart)}–${formatTime(dayEnd)}`;
   return (
     <>
       <JsonLd data={businessJsonLd()} />
@@ -49,9 +49,7 @@ export default function HomePage() {
         <div className="container">
           <div className="section__head">
             <h2 id="services-title">Услуги</h2>
-            <p className="muted">
-              Всяка терапия започва с първа среща и оценка, след която заедно поставяме цели.
-            </p>
+            <p className="muted">{servicesIntro}</p>
           </div>
           <ul className="services">
             {services.map((s) => (
@@ -66,6 +64,7 @@ export default function HomePage() {
               </li>
             ))}
           </ul>
+          <p className="services-outro prose">{servicesOutro}</p>
         </div>
       </section>
 
@@ -87,7 +86,7 @@ export default function HomePage() {
             <li>
               <div>
                 <h3>Изберете час</h3>
-                <p>Всеки час започва на кръгъл час — от {formatHour(booking.firstHour)} нататък.</p>
+                <p>Часовете започват на всеки половин час — от {formatTime(booking.firstStart)} нататък.</p>
               </div>
             </li>
             <li>
@@ -109,10 +108,13 @@ export default function HomePage() {
           <div className="prose">
             <h2 id="about-title">За логопеда</h2>
             <p>
-              {site.therapist} е логопед и работи с деца и възрастни с нарушения на речта, езика и
-              комуникацията. В кабинета родителите са част от терапията: след всяко посещение
-              получават насоки и игри за вкъщи.
+              {site.therapist} е дипломиран логопед, завършила „Логопедия“ в Нов български университет, с над 5
+              години опит. Работи с деца и възрастни — от първите думи до възстановяването на речта след
+              заболяване.
             </p>
+            <blockquote className="motto">
+              <p>Всяка малка крачка напред има значение, а всяка дума заслужава подкрепа.</p>
+            </blockquote>
             <Link href="/za-logopeda">Повече за {site.therapist}</Link>
           </div>
           <div className="callout">

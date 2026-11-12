@@ -32,11 +32,9 @@ export const formatDayNumber = (d: DateStr) => dayNum.format(utcDate(d));
 export const formatMonthShort = (d: DateStr) => monthLong.format(utcDate(d)).slice(0, 3);
 /** „ноември 2026 г.“ */
 export const formatMonthYear = (d: DateStr) => monthYear.format(utcDate(d));
-/** „15:00“ */
-export const formatHour = (h: number) =>
-  hourFmt.format(new Date(Date.UTC(2000, 0, 1, h))).replace(/\s*ч\.?$/, "");
-/** „15:00–16:00“ */
-export const formatSlot = (h: number) => `${formatHour(h)}–${formatHour(h + 1)}`;
+/** Минути от полунощ → „15:30“ */
+export const formatTime = (min: number) =>
+  hourFmt.format(new Date(Date.UTC(2000, 0, 1, Math.floor(min / 60), min % 60))).replace(/\s*ч\.?$/, "");
 /** Дата и час на създаване в софийско време. */
 export const formatDateTime = (d: Date | string) => dateTimeFmt.format(new Date(d));
 

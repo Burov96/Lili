@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CalendarIcon, Heart } from "@/components/Decor";
-import { services } from "@/lib/services";
+import { services, servicesIntro, servicesOutro } from "@/lib/services";
 
 export const metadata: Metadata = {
   title: "Логопедични услуги",
   description:
-    "Логопедична терапия при забавено речево развитие, дислалии, афазии, аутизъм, деца със СОП и обучителни трудности (дислексия, дисграфия).",
+    "Индивидуална логопедична подкрепа за деца и възрастни: езиково развитие, звукопроизношение, афазии след инсулт, домашни посещения, аутизъм, деца със СОП, обучителни трудности и познавателни умения.",
   alternates: { canonical: "/uslugi" },
 };
 
@@ -17,10 +17,7 @@ export default function ServicesPage() {
       <div className="container page-head">
         <Breadcrumbs items={[{ name: "Услуги", path: "/uslugi" }]} />
         <h1>Логопедични услуги</h1>
-        <p className="lead prose">
-          Всяка терапия започва с първа среща и оценка. След нея получавате ясен план, а детето — занимания,
-          съобразени с неговото темпо.
-        </p>
+        <p className="lead prose">{servicesIntro}</p>
       </div>
       <section className="section" style={{ paddingTop: "1rem" }} aria-label="Списък с услуги">
         <div className="container">
@@ -41,7 +38,8 @@ export default function ServicesPage() {
               </li>
             ))}
           </ul>
-          <p style={{ marginTop: "2.5rem" }}>
+          <p className="services-outro prose">{servicesOutro}</p>
+          <p style={{ marginTop: "2rem" }}>
             <Link href="/zapazi-chas" className="btn">
               <CalendarIcon />
               Запази час

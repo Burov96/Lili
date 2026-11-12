@@ -1,5 +1,5 @@
 import "server-only";
-import { formatLongDate, formatSlot } from "./format";
+import { formatLongDate, formatTime } from "./format";
 import { formatBgPhone } from "./phone";
 import type { NewBooking } from "./store";
 
@@ -13,7 +13,7 @@ export async function notifyNewBooking(b: NewBooking): Promise<void> {
   const from = process.env.NOTIFY_EMAIL_FROM;
   if (!key || !to || !from) return;
 
-  const when = `${formatLongDate(b.date)}, ${formatSlot(b.hour)}`;
+  const when = `${formatLongDate(b.date)}, ${formatTime(b.time)} ч.`;
   const lines = [
     `Ново записване: ${when}`,
     "",

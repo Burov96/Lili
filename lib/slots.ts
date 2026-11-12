@@ -1,4 +1,4 @@
-import { booking, slotHours } from "./config";
+import { booking, slotTimes } from "./config";
 
 /** Дата във формат YYYY-MM-DD (без часова зона). */
 export type DateStr = string;
@@ -117,11 +117,16 @@ export function lastBookableDate(today: DateStr): DateStr {
   return addDays(today, booking.weeksAhead * 7);
 }
 
-/** Може ли все още да се запише часът (не е минал и има достатъчно време до него). */
-export function slotNotTooLate(date: DateStr, hour: number, now = nowInSofia()): boolean {
+/** Може ли все още да се запише часът (не е минал и има достатъчно време до него). `time` е в минути. */
+export function slotNotTooLate(date: DateStr, time: number, now = nowInSofia()): boolean {
   if (date < now.date) return false;
   if (date > now.date) return true;
-  return hour * 60 - now.minutes >= booking.minLeadMinutes;
+  return time - now.minutes >= booking.minLeadMinutes;
+}
+
+/** Денят затворен ли е (празник или ръчно затворен). */
+export function closedReasonFor(date: DateStr, closedDays: Map<DateStr, string>): string | undefined {
+  return closedDays.get(date) ?? holidayName(date);
 }
 
 /**
@@ -138,7 +143,7 @@ export function calendarDays(
   for (let d = from; d <= to; d = addDays(d, 1)) {
     if (isWeekend(d)) continue;
     const reason = closedDays.get(d) ?? holidayName(d);
-    const past = !slotHours.some((h) => slotNotTooLate(d, h, now));
+    const past = !slotTimes.some((t) => slotNotTooLate(d, t, now));
     days.push({ date: d, closed: Boolean(reason), closedReason: reason, past });
   }
   return days;
@@ -147,23 +152,23 @@ export function calendarDays(
 /** Пълна проверка дали час може да бъде записан (без капацитета). */
 export function validateSlot(
   date: unknown,
-  hour: unknown,
+  time: unknown,
   closedDays: Map<DateStr, string>,
   now = nowInSofia(),
-): { ok: true; date: DateStr; hour: number } | { ok: false; error: string } {
+): { ok: true; date: DateStr; time: number } | { ok: false; error: string } {
   if (!isDateStr(date)) return { ok: false, error: "Изберете ден от календара." };
-  const h = Number(hour);
-  if (!Number.isInteger(h) || !slotHours.includes(h)) {
+  const t = Number(time);
+  if (!Number.isInteger(t) || !slotTimes.includes(t)) {
     return { ok: false, error: "Изберете час от списъка." };
   }
   if (isWeekend(date)) return { ok: false, error: "Кабинетът работи от понеделник до петък." };
-  const reason = closedDays.get(date) ?? holidayName(date);
+  const reason = closedReasonFor(date, closedDays);
   if (reason) return { ok: false, error: `Този ден кабинетът е затворен (${reason}). Изберете друг ден.` };
   if (date > lastBookableDate(now.date)) {
     return { ok: false, error: `Може да записвате до ${booking.weeksAhead} седмици напред.` };
   }
-  if (!slotNotTooLate(date, h, now)) {
+  if (!slotNotTooLate(date, t, now)) {
     return { ok: false, error: "Този час вече не може да се запише. Изберете по-късен час или друг ден." };
   }
-  return { ok: true, date, hour: h };
+  return { ok: true, date, time: t };
 }

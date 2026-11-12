@@ -3,28 +3,35 @@ import Link from "next/link";
 import { BookingForm } from "@/components/BookingForm";
 import { BookingScroll } from "@/components/BookingScroll";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { booking, site, slotHours } from "@/lib/config";
+import { booking, dayEnd, site, slotTimes } from "@/lib/config";
 import {
   formatDayNumber,
-  formatHour,
   formatLongDate,
   formatMonthShort,
   formatMonthYear,
-  formatSlot,
+  formatTime,
   spotsLabel,
 } from "@/lib/format";
 import { calendarDays, isDateStr, nowInSofia, slotNotTooLate, startOfWeek, type DayInfo } from "@/lib/slots";
+import { combinedSlotCounts } from "@/lib/recurring";
 import { getStore, slotKey } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Запази час онлайн",
-  description: `Запазете час при логопед ${site.therapist} онлайн — свободни часове от понеделник до петък от ${booking.firstHour}:00 ч.`,
+  description: `Запазете час при логопед ${site.therapist} онлайн — свободни часове от понеделник до петък от ${formatTime(booking.firstStart)} ч.`,
   alternates: { canonical: "/zapazi-chas" },
 };
 
-type Props = { searchParams: Promise<{ date?: string | string[]; hour?: string | string[] }> };
+type Props = { searchParams: Promise<{ date?: string | string[]; chas?: string | string[] }> };
+
+/** „1530“ → 930 минути; адресът остава четим: ?date=2026-11-12&chas=1530 */
+const parseChas = (v: string | undefined) => {
+  const n = Number(v);
+  return Number.isInteger(n) ? Math.floor(n / 100) * 60 + (n % 100) : NaN;
+};
+const toChas = (min: number) => String(Math.floor(min / 60) * 100 + (min % 60));
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 const DOW = ["пн", "вт", "ср", "чт", "пт"];
@@ -35,27 +42,27 @@ export default async function BookingPage({ searchParams }: Props) {
   const now = nowInSofia();
   const closed = await store.closedDays(startOfWeek(now.date));
   const days = calendarDays(closed, now);
-  const counts = await store.slotCounts(days[0].date, days[days.length - 1].date);
+  const counts = await combinedSlotCounts(store, days[0].date, days[days.length - 1].date, closed);
 
-  const freeIn = (date: string, hour: number) =>
-    Math.max(0, booking.capacityPerSlot - (counts.get(slotKey(date, hour)) ?? 0));
+  const freeIn = (date: string, time: number) =>
+    Math.max(0, booking.capacityPerSlot - (counts.get(slotKey(date, time)) ?? 0));
 
   const freeOnDay = (d: DayInfo) =>
     d.closed || d.past
       ? 0
-      : slotHours.filter((h) => slotNotTooLate(d.date, h, now)).reduce((sum, h) => sum + freeIn(d.date, h), 0);
+      : slotTimes.filter((t) => slotNotTooLate(d.date, t, now)).reduce((sum, t) => sum + freeIn(d.date, t), 0);
 
   const dateParam = one(sp.date);
   const selectedDay = isDateStr(dateParam) ? days.find((d) => d.date === dateParam) : undefined;
   const dayOpen = selectedDay && freeOnDay(selectedDay) > 0 ? selectedDay : undefined;
 
-  const hourParam = Number(one(sp.hour));
-  const hourOk =
-    dayOpen && slotHours.includes(hourParam) && slotNotTooLate(dayOpen.date, hourParam, now) && freeIn(dayOpen.date, hourParam) > 0;
-  const selectedHour = hourOk ? hourParam : undefined;
+  const timeParam = parseChas(one(sp.chas));
+  const timeOk =
+    dayOpen && slotTimes.includes(timeParam) && slotNotTooLate(dayOpen.date, timeParam, now) && freeIn(dayOpen.date, timeParam) > 0;
+  const selectedTime = timeOk ? timeParam : undefined;
   // Формата остава видима за избрания час дори ако той току-що се е запълнил —
   // иначе последният записал се няма да види потвърждението си.
-  const requested = selectedDay && slotHours.includes(hourParam) ? { date: selectedDay.date, hour: hourParam } : undefined;
+  const requested = selectedDay && slotTimes.includes(timeParam) ? { date: selectedDay.date, time: timeParam } : undefined;
 
   const first = days[0].date;
   const last = days[days.length - 1].date;
@@ -63,7 +70,7 @@ export default async function BookingPage({ searchParams }: Props) {
     formatMonthYear(first) === formatMonthYear(last)
       ? formatMonthYear(first)
       : `${formatMonthYear(first)} – ${formatMonthYear(last)}`;
-  const fewThreshold = Math.max(1, Math.floor((booking.capacityPerSlot * slotHours.length) / 3));
+  const fewThreshold = Math.max(1, Math.floor((booking.capacityPerSlot * slotTimes.length) / 3));
 
   return (
     <>
@@ -71,16 +78,16 @@ export default async function BookingPage({ searchParams }: Props) {
         <Breadcrumbs items={[{ name: "Запази час", path: "/zapazi-chas" }]} />
         <h1>Запази час</h1>
         <p className="lead prose">
-          Часовете са от понеделник до петък, {formatHour(booking.firstHour)}–{formatHour(booking.lastHour + 1)}. За
+          Часовете са от понеделник до петък, {formatTime(booking.firstStart)}–{formatTime(dayEnd)}, на всеки половин час. За
           спешен въпрос се обадете на{" "}
           <a href={`tel:${site.phoneIntl}`} className="nowrap">
             {site.phoneDisplay}
           </a>
-          .
+          . <Link href="/uslugi/domashni-poseshtenia">Домашните посещения</Link> се уговарят по телефона.
         </p>
       </div>
 
-      <BookingScroll date={selectedDay?.date ?? null} hour={requested ? requested.hour : null} />
+      <BookingScroll date={selectedDay?.date ?? null} time={requested ? requested.time : null} />
       <div className="container booking">
         <div>
           <section className="booking__step" aria-labelledby="step-day">
@@ -189,14 +196,14 @@ export default async function BookingPage({ searchParams }: Props) {
                   {formatLongDate(dayOpen.date)}
                 </p>
                 <ul className="slots" key={dayOpen.date}>
-                  {slotHours.map((h, i) => {
+                  {slotTimes.map((h, i) => {
                     const free = freeIn(dayOpen.date, h);
                     const late = !slotNotTooLate(dayOpen.date, h, now);
                     if (late || free === 0) {
                       return (
                         <li key={h} style={{ ["--i" as string]: i }}>
                           <span className="slot slot--off">
-                            <span className="slot__time">{formatSlot(h)}</span>
+                            <span className="slot__time">{formatTime(h)}</span>
                             <span className="slot__spots">{late ? "отминал" : "няма места"}</span>
                           </span>
                         </li>
@@ -205,12 +212,12 @@ export default async function BookingPage({ searchParams }: Props) {
                     return (
                       <li key={h} style={{ ["--i" as string]: i }}>
                         <Link
-                          href={`/zapazi-chas?date=${dayOpen.date}&hour=${h}`}
+                          href={`/zapazi-chas?date=${dayOpen.date}&chas=${toChas(h)}`}
                           className="slot"
-                          aria-current={selectedHour === h ? "true" : undefined}
+                          aria-current={selectedTime === h ? "true" : undefined}
                           scroll={false}
                         >
-                          <span className="slot__time">{formatSlot(h)}</span>
+                          <span className="slot__time">{formatTime(h)}</span>
                           <span className="slot__spots">{spotsLabel(free)}</span>
                         </Link>
                       </li>
@@ -232,9 +239,9 @@ export default async function BookingPage({ searchParams }: Props) {
           {requested ? (
             <BookingForm
               date={requested.date}
-              hour={requested.hour}
-              available={Boolean(hourOk)}
-              whenLabel={`${formatLongDate(requested.date)}, ${formatSlot(requested.hour)}`}
+              time={requested.time}
+              available={Boolean(timeOk)}
+              whenLabel={`${formatLongDate(requested.date)}, ${formatTime(requested.time)} ч.`}
             />
           ) : (
             <p className="empty">Изберете ден и час — след това попълнете име и телефон.</p>

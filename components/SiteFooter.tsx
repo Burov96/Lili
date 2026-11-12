@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { booking, site } from "@/lib/config";
-import { formatHour } from "@/lib/format";
+import { booking, dayEnd, site } from "@/lib/config";
+import { formatTime } from "@/lib/format";
 import { services } from "@/lib/services";
 import { Wave } from "./Decor";
 
@@ -18,7 +18,7 @@ export function SiteFooter() {
               {city ? `, ${city}` : ""}.
             </p>
             <p>
-              Понеделник – петък, {formatHour(booking.firstHour)}–{formatHour(booking.lastHour + 1)}
+              Понеделник – петък, {formatTime(booking.firstStart)}–{formatTime(dayEnd)}
               <br />
               <a href={`tel:${site.phoneIntl}`} className="nowrap">
                 {site.phoneDisplay}

@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { booking } from "@/lib/config";
-import { formatLongDate, formatSlot } from "@/lib/format";
+import { formatLongDate, formatTime } from "@/lib/format";
 import { notifyNewBooking } from "@/lib/notify";
 import { formatBgPhone, normalizeBgPhone } from "@/lib/phone";
 import { nowInSofia, validateSlot } from "@/lib/slots";
+import { expandRecurring } from "@/lib/recurring";
 import { getStore } from "@/lib/store";
 import type { BookingField, BookingState, BookingValues } from "./types";
 
@@ -51,20 +52,26 @@ export async function createBooking(prev: BookingState, form: FormData): Promise
   const store = getStore();
   const now = nowInSofia();
   const closed = await store.closedDays(now.date);
-  const slot = validateSlot(form.get("date"), form.get("hour"), closed, now);
+  const slot = validateSlot(form.get("date"), form.get("time"), closed, now);
   if (!slot.ok) return fail(slot.error, { slot: slot.error });
+
+  // Повтарящите се посещения също заемат места в часа.
+  const recurringHere = expandRecurring(await store.listRecurring(), slot.date, slot.date, closed).filter(
+    (o) => o.time === slot.time,
+  ).length;
+  const capacityLeft = booking.capacityPerSlot - recurringHere;
 
   const patientName = values.forOther ? values.patientName : null;
   const result = await store.insertBooking(
     {
       date: slot.date,
-      hour: slot.hour,
+      time: slot.time,
       bookerName: values.name,
       patientName,
       phone: phone!,
       note: values.note || null,
     },
-    booking.capacityPerSlot,
+    capacityLeft,
   );
 
   if (result === "full") {
@@ -78,7 +85,7 @@ export async function createBooking(prev: BookingState, form: FormData): Promise
 
   await notifyNewBooking({
     date: slot.date,
-    hour: slot.hour,
+    time: slot.time,
     bookerName: values.name,
     patientName,
     phone: phone!,
@@ -91,8 +98,8 @@ export async function createBooking(prev: BookingState, form: FormData): Promise
   return {
     status: "success",
     attempt,
-    slot: `${slot.date}|${slot.hour}`,
-    when: `${formatLongDate(slot.date)}, ${formatSlot(slot.hour)}`,
+    slot: `${slot.date}|${slot.time}`,
+    when: `${formatLongDate(slot.date)}, ${formatTime(slot.time)} ч.`,
     who: patientName ?? values.name,
     phone: formatBgPhone(phone!),
   };
